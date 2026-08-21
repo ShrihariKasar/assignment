@@ -15,6 +15,9 @@ import {
   Loader2,
   Calendar,
   ChevronDown,
+  CheckCircle2,
+  Play,
+  RotateCcw,
 } from 'lucide-react';
 
 export const TicketDetails = () => {
@@ -167,23 +170,50 @@ export const TicketDetails = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{ticket.subject}</h1>
         </div>
 
-        {/* Status Dropdown Selector */}
-        <div className="flex items-center gap-3 self-start md:self-auto shrink-0">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Status:
-          </span>
+        {/* Status Quick Actions & Dropdown Selector */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto shrink-0">
+          {ticket.status === 'Open' && (
+            <button
+              onClick={() => handleStatusChange('In Progress')}
+              disabled={updatingStatus}
+              className="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-2 rounded-lg border border-blue-200 transition-colors disabled:opacity-50"
+            >
+              <Play className="w-3.5 h-3.5" />
+              <span>In Progress</span>
+            </button>
+          )}
+          {ticket.status !== 'Closed' ? (
+            <button
+              onClick={() => handleStatusChange('Closed')}
+              disabled={updatingStatus}
+              className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold px-3 py-2 rounded-lg border border-emerald-200 transition-colors disabled:opacity-50"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Close Ticket</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => handleStatusChange('Open')}
+              disabled={updatingStatus}
+              className="inline-flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold px-3 py-2 rounded-lg border border-amber-200 transition-colors disabled:opacity-50"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reopen Ticket</span>
+            </button>
+          )}
+
           <div className="relative">
             <select
               value={ticket.status}
               onChange={(e) => handleStatusChange(e.target.value)}
               disabled={updatingStatus}
-              className="appearance-none bg-slate-50 border border-slate-300 font-semibold text-sm rounded-lg px-3.5 py-2 pr-9 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer disabled:opacity-50"
+              className="appearance-none bg-slate-50 border border-slate-300 font-semibold text-xs sm:text-sm rounded-lg px-3 py-2 pr-8 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer disabled:opacity-50"
             >
               <option value="Open">Open</option>
               <option value="In Progress">In Progress</option>
               <option value="Closed">Closed</option>
             </select>
-            <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
       </div>

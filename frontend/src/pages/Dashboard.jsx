@@ -1,14 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ticketApi } from '../services/api';
 import TicketTable from '../components/TicketTable';
+import SearchBar from '../components/SearchBar';
 import { SkeletonTable } from '../components/Skeleton';
-import { Ticket, Clock, CheckCircle, AlertCircle, Plus, ArrowRight } from 'lucide-react';
+import { Ticket, Clock, CheckCircle, AlertCircle, Plus, ArrowRight, Search, X } from 'lucide-react';
 
 export const Dashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({ total: 0, open: 0, in_progress: 0, closed: 0 });
   const [recentTickets, setRecentTickets] = useState([]);
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -32,6 +37,31 @@ export const Dashboard = () => {
 
     fetchData();
   }, []);
+
+  // Handle quick search on Dashboard
+  const handleSearchChange = useCallback(async (query) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults(null);
+      setSearching(false);
+      return;
+    }
+
+    try {
+      setSearching(true);
+      const results = await ticketApi.getTickets({ search: query.trim() });
+      setSearchResults(results);
+    } catch (err) {
+      console.error('Search error on dashboard:', err);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSearchResults(null);
+  };
 
   const statCards = [
     {
@@ -59,6 +89,8 @@ export const Dashboard = () => {
       bg: 'bg-emerald-100 text-emerald-800',
     },
   ];
+
+  const displayedTickets = searchResults !== null ? searchResults : recentTickets;
 
   return (
     <div className="space-y-6">
@@ -119,29 +151,65 @@ export const Dashboard = () => {
         })}
       </div>
 
-      {/* Recent Tickets Section */}
+      {/* Recent Tickets / Search Results Section */}
       <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Recent Tickets</h2>
-            <p className="text-xs text-slate-500">Latest activity across active support requests</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="shrink-0">
+            <h2 className="text-lg font-bold text-slate-900">
+              {searchResults !== null ? `Search Results` : 'Recent Tickets'}
+            </h2>
+            <p className="text-xs text-slate-500">
+              {searchResults !== null
+                ? `Found ${searchResults.length} matching ticket(s)`
+                : 'Latest activity across active support requests'}
+            </p>
           </div>
-          <Link
-            to="/tickets"
-            className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-blue-600 transition-colors"
-          >
-            <span>View all tickets</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+
+          {/* Quick Search Bar directly in Recent Tickets header */}
+          <div className="flex-1 max-w-md">
+            <SearchBar
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onClear={handleClearSearch}
+              placeholder="Search by name, ID, email, or description..."
+            />
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0 self-end md:self-auto">
+            {searchResults !== null && (
+              <button
+                onClick={handleClearSearch}
+                className="text-xs font-medium text-slate-500 hover:text-slate-900 underline"
+              >
+                Clear Search
+              </button>
+            )}
+            <Link
+              to={searchQuery ? `/tickets?search=${encodeURIComponent(searchQuery)}` : '/tickets'}
+              className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-blue-600 transition-colors whitespace-nowrap"
+            >
+              <span>{searchResults !== null ? 'View all results' : 'View all tickets'}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
-        {loading ? (
+        {loading || searching ? (
           <SkeletonTable rows={5} />
-        ) : recentTickets.length > 0 ? (
-          <TicketTable tickets={recentTickets} />
+        ) : displayedTickets.length > 0 ? (
+          <TicketTable tickets={displayedTickets} />
         ) : (
-          <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 text-sm">
-            No support tickets in queue yet.
+          <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 text-sm space-y-2">
+            <p className="font-semibold text-slate-700">No tickets found matching "{searchQuery}"</p>
+            <p className="text-xs text-slate-500">
+              Try searching by customer name, email address, ticket ID (e.g. TKT-001), or issue keywords.
+            </p>
+            <button
+              onClick={handleClearSearch}
+              className="mt-2 inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium px-3 py-1.5 rounded-md transition-colors"
+            >
+              Clear Search
+            </button>
           </div>
         )}
       </div>

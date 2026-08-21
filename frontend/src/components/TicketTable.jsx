@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
-import { Mail, ChevronRight, Copy, Check } from 'lucide-react';
-import { useState } from 'react';
+import { Mail, ChevronRight, Copy, Check, Filter } from 'lucide-react';
 
 // Robust UTC Date parser for ISO strings lacking timezone designator
 export const parseDate = (dateString) => {
@@ -48,9 +47,27 @@ export const formatDateTime = (dateString) => {
   });
 };
 
-export const TicketTable = ({ tickets = [] }) => {
+export const TicketTable = ({
+  tickets = [],
+  statusFilter: propStatusFilter = 'All',
+  priorityFilter: propPriorityFilter = 'All',
+  onStatusChange,
+  onPriorityChange,
+}) => {
   const navigate = useNavigate();
   const [copiedId, setCopiedId] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState(propStatusFilter);
+  const [selectedPriority, setSelectedPriority] = useState(propPriorityFilter);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    setSelectedStatus(propStatusFilter);
+  }, [propStatusFilter]);
+
+  useEffect(() => {
+    setSelectedPriority(propPriorityFilter);
+  }, [propPriorityFilter]);
 
   const handleCopy = (e, ticketId) => {
     e.stopPropagation();
@@ -58,6 +75,16 @@ export const TicketTable = ({ tickets = [] }) => {
     setCopiedId(ticketId);
     setTimeout(() => setCopiedId(null), 2000);
   };
+
+  const filteredTickets = tickets.filter((ticket) => {
+    if (selectedStatus && selectedStatus.toLowerCase() !== 'all') {
+      if (ticket.status?.toLowerCase() !== selectedStatus.toLowerCase()) return false;
+    }
+    if (selectedPriority && selectedPriority.toLowerCase() !== 'all') {
+      if (ticket.priority?.toLowerCase() !== selectedPriority.toLowerCase()) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
@@ -69,14 +96,139 @@ export const TicketTable = ({ tickets = [] }) => {
               <th className="py-3 px-4">Ticket</th>
               <th className="py-3 px-4">Customer</th>
               <th className="py-3 px-4">Subject</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4">Priority</th>
+              
+              {/* Status Header with Filter Icon */}
+              <th className="py-3 px-4 relative">
+                <div
+                  className="inline-flex items-center gap-1.5 cursor-pointer select-none group"
+                  onClick={() => {
+                    setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                    setIsPriorityDropdownOpen(false);
+                  }}
+                >
+                  <span>Status</span>
+                  <button
+                    type="button"
+                    className={`p-1 rounded transition-colors ${
+                      selectedStatus !== 'All'
+                        ? 'text-blue-600 bg-blue-100 font-bold'
+                        : 'text-slate-400 group-hover:text-slate-700 hover:bg-slate-200'
+                    }`}
+                    title="Filter by: Open, In Progress, Closed"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                  </button>
+                  {selectedStatus !== 'All' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  )}
+                </div>
+
+                {/* Filter Dropdown Popover */}
+                {isStatusDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsStatusDropdownOpen(false)}
+                    />
+                    <div className="absolute left-3 top-full mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 font-normal normal-case text-xs">
+                      <div className="px-3 py-1.5 font-bold text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-100">
+                        Filter by Status
+                      </div>
+                      {['All', 'Open', 'In Progress', 'Closed'].map((st) => {
+                        const isSelected = selectedStatus.toLowerCase() === st.toLowerCase();
+                        return (
+                          <button
+                            key={st}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedStatus(st);
+                              setIsStatusDropdownOpen(false);
+                              if (onStatusChange) onStatusChange(st);
+                            }}
+                            className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors ${
+                              isSelected ? 'font-bold text-blue-600 bg-blue-50/60' : 'text-slate-700'
+                            }`}
+                          >
+                            <span>{st === 'All' ? 'All Statuses' : st}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </th>
+
+              {/* Priority Header with Filter Icon */}
+              <th className="py-3 px-4 relative">
+                <div
+                  className="inline-flex items-center gap-1.5 cursor-pointer select-none group"
+                  onClick={() => {
+                    setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
+                    setIsStatusDropdownOpen(false);
+                  }}
+                >
+                  <span>Priority</span>
+                  <button
+                    type="button"
+                    className={`p-1 rounded transition-colors ${
+                      selectedPriority !== 'All'
+                        ? 'text-blue-600 bg-blue-100 font-bold'
+                        : 'text-slate-400 group-hover:text-slate-700 hover:bg-slate-200'
+                    }`}
+                    title="Filter by priority: Low, Medium, High, Urgent"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                  </button>
+                  {selectedPriority !== 'All' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  )}
+                </div>
+
+                {/* Priority Filter Dropdown Popover */}
+                {isPriorityDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsPriorityDropdownOpen(false)}
+                    />
+                    <div className="absolute left-3 top-full mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 font-normal normal-case text-xs">
+                      <div className="px-3 py-1.5 font-bold text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-100">
+                        Filter by Priority
+                      </div>
+                      {['All', 'Low', 'Medium', 'High', 'Urgent'].map((pr) => {
+                        const isSelected = selectedPriority.toLowerCase() === pr.toLowerCase();
+                        return (
+                          <button
+                            key={pr}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPriority(pr);
+                              setIsPriorityDropdownOpen(false);
+                              if (onPriorityChange) onPriorityChange(pr);
+                            }}
+                            className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors ${
+                              isSelected ? 'font-bold text-blue-600 bg-blue-50/60' : 'text-slate-700'
+                            }`}
+                          >
+                            <span>{pr === 'All' ? 'All Priorities' : pr}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </th>
+
               <th className="py-3 px-4">Timestamp</th>
               <th className="py-3 px-4 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium">
-            {tickets.map((ticket) => (
+            {filteredTickets.map((ticket) => (
               <tr
                 key={ticket.ticket_id}
                 onClick={() => navigate(`/tickets/${ticket.ticket_id}`)}
@@ -148,7 +300,7 @@ export const TicketTable = ({ tickets = [] }) => {
 
       {/* Mobile Card List View */}
       <div className="md:hidden divide-y divide-slate-100">
-        {tickets.map((ticket) => (
+        {filteredTickets.map((ticket) => (
           <div
             key={ticket.ticket_id}
             onClick={() => navigate(`/tickets/${ticket.ticket_id}`)}

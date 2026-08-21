@@ -5,7 +5,7 @@ export const SearchBar = ({
   value = '',
   onChange,
   onClear,
-  placeholder = 'Search tickets by customer, email, ID or issue...',
+  placeholder = 'Quick search across names, IDs, emails, and descriptions...',
 }) => {
   return (
     <div className="relative flex-1 min-w-[240px]">
